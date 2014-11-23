@@ -43,6 +43,12 @@ int  main (int argc, char *argv[])
 			bzero(send_buf,MAXBUF);
 			scanf("%s",&send_buf);
 			datanum=send(fd,send_buf,strlen(send_buf),0);
+			if(strcasecmp(send_buf,"quit")==0)
+			{
+				printf("Quit------\n");
+				close(fd);
+				break;
+			}
 	}
 	
 	return 0;

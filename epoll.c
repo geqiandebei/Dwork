@@ -57,6 +57,7 @@ int  main (int argc, char *argv[])
 	}
 	set_nonblock(serfd);
 	eve.events=EPOLLIN|EPOLLET;
+	eve.data.fd=serfd;
 	if(epoll_ctl(epfd,EPOLL_CTL_ADD,serfd,&eve)<0) exit(-1);
 	
 	revent=calloc(sizeof(struct epoll_event),MAXEVENTS);
@@ -76,16 +77,28 @@ int  main (int argc, char *argv[])
 								fprintf(stderr,"accpet error\n");
 								exit(-1);
 						}
-						eve.events=EPOLLIN|EPOLLET;	//
+						eve.events=EPOLLIN|EPOLLET;
+						eve.data.fd=clientfd;
 						set_nonblock(clientfd);
 						epoll_ctl(epfd,EPOLL_CTL_ADD,clientfd,&eve);
 					}
 					else
 					{
-						bzero(recv_buf,MAXBUF);
 						tmp=revent[i].data.fd;
-						datanum=recv(tmp,recv_buf,MAXBUF,0);
-						printf("[%d] send %s\n",tmp,recv_buf);
+						if(revent[i].events & EPOLLIN)
+						{
+							bzero(recv_buf,MAXBUF);
+							datanum=recv(tmp,recv_buf,MAXBUF,0);
+							printf("[%d] send %s\n",tmp,recv_buf);
+							if(strcasecmp(recv_buf,"Quit")==0)
+							{
+									eve.events=EPOLLIN|EPOLLET;
+									eve.data.fd=tmp;
+									epoll_ctl(epfd,EPOLL_CTL_DEL,tmp,&eve);
+									close(tmp);
+									printf("client:%d quit\n",tmp);
+							}
+						}
 					}
 			}
 			sleep(1);
