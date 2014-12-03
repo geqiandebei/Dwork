@@ -13,6 +13,8 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <pthread.h>
+
+#define WorkRoom "/home/da/Dwork/Dhttpd"   //设置工作目录
 /*
 static char ContentType[][32]=
 {
@@ -516,12 +518,24 @@ void unimplemented(int client)   // 未实现的方法
 int main(void)
 {
  int server_sock = -1;
+ int i;
  u_short port = 8888;
  int client_sock = -1;
  struct sockaddr_in client_name;
  int client_name_len = sizeof(client_name);
  pthread_t newthread;
-
+ pid_t pid;
+ pid=fork();
+ if(pid==-1)
+ {
+	 perror("dhttpd start failed! fork error...\n");
+	 exit(1);
+ }
+ else if(pid>0) exit(0);             //kill parent process
+ setsid();
+ chdir(WorkRoom);
+ umask(0655);
+ for(i=0;i<3;i++) close(i);	//close opened file description
  server_sock = startup(&port);
  printf("httpd running on port %d\n", port);
 

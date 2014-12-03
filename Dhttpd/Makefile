@@ -7,4 +7,5 @@ get: ${cgi}/get.c
 post: ${cgi}/post.c
 	gcc $< -o ${cgi}/$@
 clean:
-	rm dhttpd
+	-rm dhttpd
+	-rm ${cgi}/get ${cgi}/post
