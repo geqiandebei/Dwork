@@ -15,35 +15,9 @@
 #include <pthread.h>
 
 #define WorkRoom "/home/da/Dwork/Dhttpd"   //设置工作目录
-/*
-static char ContentType[][32]=
-{
-	"text/xml","application/x-jpg"
-};
- 
-struct ResHeader  	//ÏìÓ¦±¨Í·
-{
-	char data[64];
-	char server[128];
-	char lastmodify[64];
-};
-
-struct Content  
-{
-	
-};
-struct Response 
-{
-	char version[32];	// HTTP版本
-	char statuscode[12]; 	//状态码
-	char reason_phrase[32];	//原因短语
-	struct ResHeader header;
-};
-*/
+#define SERVER_STRING "Server: Dhttpd1.0\r\n"
 
 #define ISspace(x) isspace((int)(x))
-
-#define SERVER_STRING "Server: jdbhttpd/0.1.0\r\n"
 
 void accept_request(int);
 void bad_request(int);
@@ -57,6 +31,7 @@ void serve_file(int, const char *);
 int startup(u_short *);
 void unimplemented(int);
 void execute_cgi(int client, const char *path, const char *method, const char *query_string);
+
 /**********************************************************************/
 /* Execute a CGI script.  Will need to set environment variables as
  * appropriate.
@@ -66,8 +41,7 @@ void execute_cgi(int client, const char *path, const char *method, const char *q
 void execute_cgi(int client, const char *path,
                  const char *method, const char *query_string)
 {
-	printf("exe cgi starting...\n");
-	char buf[1024];
+	 char buf[1024];
 	 int cgi_output[2];
 	 int cgi_input[2];
 	 pid_t pid;
@@ -76,7 +50,6 @@ void execute_cgi(int client, const char *path,
 	 char c;
 	 int numchars = 1;
 	 int content_length = -1;
-
 	 buf[0] = 'A'; buf[1] = '\0';
 	 if (strcasecmp(method, "POST") == 0)
 	 {
@@ -88,8 +61,6 @@ void execute_cgi(int client, const char *path,
 	}
 	 sprintf(buf, "HTTP/1.1 200 OK\r\n");
 	 send(client, buf, strlen(buf), 0);
-	 printf("tou fa song \n");
-	 
 	 if (pipe(cgi_output) < 0) {
 	  cannot_execute(client);
 	  return;
@@ -103,7 +74,6 @@ void execute_cgi(int client, const char *path,
 	  cannot_execute(client);
 	  return;
 	 }
-	 printf("child progess staring \n");
 	 if (pid == 0)  /* child: CGI script */
 	 {
 	  char meth_env[255];
@@ -156,7 +126,7 @@ void accept_request(int client)
 {
 	 char buf[1024];
 	 int numchars;
-	char method[255];
+	 char method[255];
 	 char url[255];
 	 char path[512];
 	 char version[32];
@@ -165,8 +135,6 @@ void accept_request(int client)
 	 char length[32];
 	 size_t i, j;
 	 struct stat st;
-	 int cgi = 0;      /* becomes true if server decides this is a CGI
-						* program */
 	 memset(buf,0,sizeof(buf));
 	 memset(method,0,sizeof(method));
 	 memset(url,0,sizeof(method));
@@ -221,7 +189,7 @@ void accept_request(int client)
 		}
 		memset(buf,0,sizeof(buf));
 	}
-	printf("请求行内容获取完毕 >>>>>>>>>>>>>>\n");
+	printf(">>>>>>>>>>>>>> 请求行内容获取完毕 : 方法 URL HTTP版本号 >>>>>>>>>>>>>>\n");
 	if (strcasecmp(method, "GET") == 0)						//get方法
 	{
 		 if( (query_string=strchr(url,'?'))==NULL )        //不存在?号,不为CGI请求
@@ -290,16 +258,16 @@ void cat(int client, int filefd)
 	printf("read %d bytes\n",n);
  	m=n;
 	while(m)
-		{
+	{
 		sended=send(client,buf+sended,n-sended,0);
 		printf("send %d bytes,rest %s\n",sended,buf+sended);
 		if(sended==-1)
-			{
-				printf("send error!");
-				return -1;
-			}
-		 m-=sended;
+		{
+			printf("send error!");
+			return -1;
 		}
+		 m-=sended;
+	}
 	 memset(buf,0,sizeof(buf)); 
  }
 }
@@ -437,19 +405,18 @@ void not_found(int client)
 /**********************************************************************/
 void serve_file(int client, const char *filename)
 {
- int filefd;
- int numchars = 1;
- char buf[1024];
- 
- filefd=open(filename,O_RDONLY);
- if(filefd==-1)  not_found(client);
- else
- {
- printf("%s open .\n",filename); 
-  headers(client, filename);
-  cat(client, filefd);
- }
- close(filefd);
+	int filefd;
+	int numchars = 1;
+	char buf[1024];
+	filefd=open(filename,O_RDONLY);
+	if(filefd==-1)  not_found(client);
+	else
+	{
+		printf("%s open .\n",filename); 
+		headers(client, filename);
+		cat(client, filefd);
+	}
+	close(filefd);
 }
 
 /**********************************************************************/
@@ -474,13 +441,6 @@ int startup(u_short *port)
  name.sin_addr.s_addr = htonl(INADDR_ANY);
  if (bind(httpd, (struct sockaddr *)&name, sizeof(name)) < 0)
   error_die("bind");
- if (*port == 0)  /* if dynamically allocating a port */
- {
-  int namelen = sizeof(name);
-  if (getsockname(httpd, (struct sockaddr *)&name, &namelen) == -1)
-   error_die("getsockname");
-  *port = ntohs(name.sin_port);
- }
  if (listen(httpd, 5) < 0)
   error_die("listen");
  return(httpd);
@@ -515,43 +475,47 @@ void unimplemented(int client)   // 未实现的方法
 
 /**********************************************************************/
 
-int main(void)
+int main(int argc,char *argv[])
 {
- int server_sock = -1;
- int i;
- u_short port = 8888;
- int client_sock = -1;
- struct sockaddr_in client_name;
- int client_name_len = sizeof(client_name);
- pthread_t newthread;
- pid_t pid;
- pid=fork();
- if(pid==-1)
- {
+	int server_sock = -1;
+	int i;
+	u_short port = 8888;
+	int client_sock = -1;
+	struct sockaddr_in client_name;
+	int client_name_len = sizeof(client_name);
+	pthread_t newthread;
+	pid_t pid;
+	if(argc==2)
+	{
+	 port=atoi(argv[1]);
+	}
+	pid=fork();
+	if(pid==-1)
+	{
 	 perror("dhttpd start failed! fork error...\n");
 	 exit(1);
- }
- else if(pid>0) exit(0);             //kill parent process
- setsid();
- chdir(WorkRoom);
- umask(0655);
- for(i=0;i<3;i++) close(i);	//close opened file description
- server_sock = startup(&port);
- printf("httpd running on port %d\n", port);
+	}
+	else if(pid>0) exit(0);             //kill parent process
+	setsid();
+	chdir(WorkRoom);
+	umask(0655);
+	for(i=0;i<3;i++) close(i);	//close opened file description
+	server_sock = startup(&port);
+	printf("httpd running on port %d\n", port);
 
- while (1)
- {
-  client_sock = accept(server_sock,
-                       (struct sockaddr *)&client_name,
-                       &client_name_len);
-  if (client_sock == -1)
-   error_die("accept");
- /* accept_request(client_sock); */
- if (pthread_create(&newthread , NULL, (void*)accept_request, (void*)client_sock)!= 0)
-   perror("pthread_create");
- printf("connect estabilshed\n");
- }
+	while (1)
+	{
+	client_sock = accept(server_sock,
+					   (struct sockaddr *)&client_name,
+					   &client_name_len);
+	if (client_sock == -1)
+	error_die("accept");
+	/* accept_request(client_sock); */
+	if (pthread_create(&newthread , NULL, (void*)accept_request, (void*)client_sock)!= 0)
+	perror("pthread_create");
+	printf("connect estabilshed\n");
+	}
 
- close(server_sock);
- return(0);
+	close(server_sock);
+	return(0);
 }
